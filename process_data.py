@@ -9,7 +9,7 @@ def make_date_not_iso(d: str) -> date:
     d = d.split()[0].split("-")
     return date(int(d[2]), int(d[0]), int(d[1]))
 
-class state_day:
+class StateDay:
 
     def __init__(self, day, state, positive, negative=0, pending=0, death=0, total=0):
         self.state = state
@@ -28,6 +28,21 @@ class state_day:
         else:
             self.den = -1
 
+    def get_positive(self):
+        return self.positive
+
+    def get_negative(self):
+        return self.negative
+
+    def get_pending(self):
+        return self.pending
+
+    def get_death(self):
+        return self.death
+
+    def get_total(self):
+        return self.total
+    
     def _to_numeric(self, val):
         if val != '':
             return float(val)
@@ -44,9 +59,9 @@ with open('us_states_covid19_daily.csv') as file:
         if row[0].isdigit():
             day = make_date(row[0])
             if day in us_daily:
-                us_daily[day][row[1]] = state_day(day, row[1], row[2], row[3], row[4], row[5], row[6])
+                us_daily[day][row[1]] = StateDay(day, row[1], row[2], row[3], row[4], row[5], row[6])
             else:
-                us_daily[day] = {row[1]: state_day(day, row[1], row[2], row[3], row[4], row[5], row[6])}
+                us_daily[day] = {row[1]: StateDay(day, row[1], row[2], row[3], row[4], row[5], row[6])}
 
 italy_daily = {}
 italy_by_region ={}
@@ -55,7 +70,7 @@ with open("covid19_italy_province.csv") as file:
     for row in reader:
         if row[0].isdigit():
             day = date.fromisoformat(row[1].split()[0])
-            data = state_day(day, row[6], row[10])
+            data = StateDay(day, row[6], row[10])
             
             if day in italy_daily:
                 italy_daily[day][row[6]] = [data]

@@ -2,9 +2,15 @@ import csv
 import math
 from linear_regression import Regression
 import matplotlib.pyplot as plt
-from process_data import state_pop, state_den
+from process_data import state_pop, state_den, StateDay
 from datetime import date
 from process_data import us_daily, italy_daily, italy_by_region
+
+OPERATIONS = {"positive" : StateDay.get_positive,
+              "negative": StateDay.get_negative,
+              "total": StateDay.get_total,
+              "pending": StateDay.get_pending,
+              "death": StateDay.get_death}
 
 
 def make_date(d: str) -> date:
@@ -74,7 +80,7 @@ def plot_slope_density_USA(start_date: str) -> None:
     x_axis = [x for x in densities]
 ##    plt.plot(x_axis, y_reg, label="slope v density regression")
 
-def plot_slope_density_states(start_date: str, *states: [str]):
+def plot_slope_density_states(start_date: str, *states: [str]) -> None:
     start_date = date.fromisoformat(start_date)
     slopes = []
     densities = []
@@ -95,12 +101,11 @@ def plot_slope_density_states(start_date: str, *states: [str]):
     y_reg = [reg.calc(x) for x in densities]
     x_axis = [x for x in densities]
     
-def positive_regression(state: str, start_date: str):
+def calc_exp_regression(attr: str, state: str, start_date: str) -> Regression:
     state_data = get_state_data(us_daily, state)
     start_date = date.fromisoformat(start_date)
     
-    plot_data = {days_elapsed(x, start_date): log(y.positive) for x, y in state_data.items() if x >= start_date and y.positive != -1}
-    x_axis_log, y_axis_log = list(plot_data.keys()), list(plot_data.values())
+    x_axis_log, y_axis_log = get_log_plot_data(start_date, state_data, OPERATIONS[attr])
     reg = Regression(x_axis_log, y_axis_log)
 
     print("Slope:", reg.slope, "Intercept:", reg.intercept)
@@ -109,45 +114,26 @@ def positive_regression(state: str, start_date: str):
     y_reg = [reg.calc(x) for x in x_axis_log]
     x_axis = [x for x in x_axis_log]
     y_axis = [math.exp(y) for y in y_reg]
-    plt.plot(x_axis, y_axis, label=state+" regression")
-
-def plot_state_positives(state: str, start_date: date) -> None:
-    state_data = get_state_data(us_daily, state)
-
-    plot_data = {days_elapsed(x, start_date): y.positive for x, y in state_data.items() if x >= start_date and y.positive != -1}
-    plt.plot(list(plot_data.keys()), list(plot_data.values()), label=state)
-
-def plot_state_positives_log(state: str, start_date: date) -> None:
-    state_data = get_state_data(us_daily, state)
-
-    plot_data = {days_elapsed(x, start_date): math.log(y.positive) for x, y in state_data.items() if x >= start_date and y.positive != -1}
-    plt.plot(list(plot_data.keys()), list(plot_data.values()), label=state)
-
-def plot_state_death(state: str, start_date: date) -> None:
-    state_data = get_state_data(us_daily, state)
-
-    plot_data = {days_elapsed(x, start_date): y.death for x, y in state_data.items() if x >= start_date and y.death != -1}
-    plt.plot(list(plot_data.keys()), list(plot_data.values()), label=state)
-
-def plot_state_total(state: str, start_date: date) -> None:
-    state_data = get_state_data(us_daily, state)
-
-    plot_data = {days_elapsed(x, start_date): y.total for x, y in state_data.items() if x >= start_date and y.total != -1}
-    plt.plot(list(plot_data.keys()), list(plot_data.values()), label=state)
+    plt.plot(x_axis, y_axis, label=state+" "+attr+" regression")
+    return reg
 
 def plot_states(attr: str, start_date: str, *states: str) -> None:
-    attributes = {"positive": plot_state_positives,
-                  "positive_log": plot_state_positives_log,
-                  "death": plot_state_death,
-                  "total": plot_state_total}
     start_date = date.fromisoformat(start_date)
     for state in states:
-        attributes[attr](state, start_date)
+        state_data = get_state_data(us_daily, state)
+        plt.scatter(*get_plot_data(start_date, state_data, OPERATIONS[attr]), label=state)
+
+def get_plot_data(start_date: date, state_data: dict, op: "func") -> ([], []):
+    plot_data = {days_elapsed(x, start_date): op(y) for x, y in state_data.items() if x >= start_date and op(y) != -1}
+    return list(plot_data.keys()), list(plot_data.values())
+
+def get_log_plot_data(start_date: date, state_data: dict, op: "func") -> ([], []):
+    plot_data = {days_elapsed(x, start_date): log(op(y)) for x, y in state_data.items() if x >= start_date and op(y) != -1}
+    return list(plot_data.keys()), list(plot_data.values())
 
 def plot_italy_positives_province(pro: str, start_date: str):
     start_date = date.fromisoformat(start_date)
 
-    
 def show_plot():
     plt.legend()
     plt.show()
